@@ -209,7 +209,7 @@ public class KThread {
 
 		currentThread.status = statusFinished;
 		/** zjt for P1 T1 在线程结束时，将join队列中的线程唤醒到就绪队列 **/
-		KThread thread = joinQueue.nextThread();
+		KThread thread = currentThread.joinQueue.nextThread();
 		if (thread != null) {
 			thread.ready();
 		}
@@ -566,8 +566,8 @@ public class KThread {
 	private static int numCreated = 0;
 
 	private static ThreadQueue readyQueue = null;
-	/** zjt for P1 T1 由于自己的join而被阻塞的进程 **/
-	private static ThreadQueue joinQueue = null;
+	/** zjt for P1 T1 由于自己的join而被阻塞的进程**/
+	private ThreadQueue joinQueue = null;
 	/** zjt for P1 T1 **/
 	private static KThread currentThread = null;
 	private static KThread toBeDestroyed = null;
