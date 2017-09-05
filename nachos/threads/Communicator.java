@@ -1,7 +1,8 @@
 package nachos.threads;
 
-import java.util.*; // +zjt+
 import nachos.machine.*;
+
+import java.util.*; // +zjt+
 
 /**
  * A <i>communicator</i> allows threads to synchronously exchange 32-bit
@@ -16,10 +17,10 @@ public class Communicator {
 	 */
 	public Communicator() {
 		/** zjt P1 T4 **/
-		lock = new Lock();
-		listener = new Condition2(lock);
-		speaker = new Condition2(lock);
-		waitingReturn = new Condition2(lock);
+		this.isWordReady = false;
+		this.lock = new Lock();
+		this.speakerCond = new Condition2(lock);
+		this.listenerCond = new Condition2(lock);
 		/** zjt P1 T4 **/
 	}
 
@@ -36,31 +37,22 @@ public class Communicator {
 	 */
 	public void speak(int word) {
 		/** zjt P1 T4 **/
-		// 获取操作权限
 		lock.acquire();
-		// 查看是否有人发送数据
-		while (sendingSpeaker != 0) {
-			waitingSpeaker++;
-			// 加入等待队列 sleep()会释放掉锁
-			speaker.sleep();
-			// 等待被唤醒
-			waitingSpeaker--;
-			// 移出等待
+		speaker++;
+		// 说话人的数量增加
+
+		// 如果word未释放，或者没人接受则sleep()
+		while (isWordReady || listener == 0) {
+			speakerCond.sleep();
 		}
-		sendingSpeaker++;
-		data = word;
-		System.out.println(KThread.currentThread().getName() + " speaks" + word);
-		if (receivingListener != 0) {
-			waitingReturn.wake();
-		} else {
-			waitingReturn.sleep();
-		}
-		sendingSpeaker--;
-		if (waitingSpeaker != 0) {
-			speaker.wake();
-		}
+		// 以下原子操作区
+		this.word = word;
+		isWordReady = true;
+		// 唤醒所有等待接听者
+		listenerCond.wakeAll();
+		speaker--;
+		System.out.println(Thread.currentThread().getName() + " speaks " + word);
 		lock.release();
-		return;
 		/** zjt P1 T4 **/
 	}
 
@@ -73,26 +65,22 @@ public class Communicator {
 	public int listen() {
 		/** zjt P1 T4 **/
 		lock.acquire();
-		while (receivingListener != 0) {
-			waitingListener++;
-			listener.sleep();
-			waitingListener--;
+
+		listener++; // zjt+
+
+		// word无意义，便唤醒说话者，进行等待
+		while (isWordReady == false) {
+			speakerCond.wakeAll();
+			listenerCond.sleep();
 		}
-		receivingListener++;
-		if (sendingSpeaker != 0) {
-			// 若有人正在写入 则唤醒等待数据接收的Condition2
-			waitingReturn.wake();
-		} else {
-			// 若无人正在写入 则睡眠等待数据接收的Condition2
-			waitingReturn.sleep();
-		}
-		if (waitingListener != 0) {
-			listener.wake();
-		}
-		int word = data;
-		System.out.println(KThread.currentThread().getName() + " listens a word" + word);
-		receivingListener--;
+		// 原子操作区域
+		int word = this.word;
+		isWordReady = false;
+
+		listener--;
+		System.out.println(Thread.currentThread().getName() + " listens a word  " + word);
 		lock.release();
+
 		return word;
 	}
 
@@ -383,18 +371,12 @@ public class Communicator {
 
 	}
 
-	/** zjt P1 T4 **/
+	private int listener = 0; // zjt+
+	private int speaker = 0; // zjt+
+	private int word = 0; // zjt+
+	private boolean isWordReady; // zjt+
 
-	/** zjt P1 T4 **/
-	private int waitingSpeaker = 0;
-	private int sendingSpeaker = 0;
-	private int waitingListener = 0;
-	private int receivingListener = 0;
-	private int data;
-	private Lock lock;
-	private Condition2 speaker;
-	private Condition2 listener;
-	private Condition2 waitingReturn;
-	/** zjt P1 T4 **/
-
+	private Lock lock; // zjt+
+	private Condition2 speakerCond; // zjt+
+	private Condition2 listenerCond; // zjt+
 }
