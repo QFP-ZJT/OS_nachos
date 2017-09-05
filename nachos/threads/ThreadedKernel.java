@@ -53,7 +53,9 @@ public class ThreadedKernel extends Kernel {
 		/** zjt P1 T2 **/
 //		Condition2.selfTest();
 		/** zjt P1 T3 **/
-		Alarm.selfTest();
+//		Alarm.selfTest();
+		/** zjt P1 T4 **/
+		Communicator.selfTest();
 		Semaphore.selfTest();
 		SynchList.selfTest();
 		if (Machine.bank() != null) {
