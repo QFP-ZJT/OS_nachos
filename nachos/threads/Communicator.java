@@ -108,13 +108,7 @@ public class Communicator {
 		}
 
 		public void run() {
-			// System.out.print(KThread.currentThread().getName()
-			// + " will listen \n");
-
 			int word = comm.listen();
-
-			// System.out.print(KThread.currentThread().getName() + " Listen a
-			// word: " + word + " \n");
 		}
 
 		private Communicator comm;
