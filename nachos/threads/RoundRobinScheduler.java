@@ -58,14 +58,14 @@ public class RoundRobinScheduler extends Scheduler {
 	    return (KThread) waitQueue.removeFirst();
 	}
 
-	/**
+	/**这是什么意思    参数也没有用上啊
 	 * The specified thread has received exclusive access, without using
 	 * <tt>waitForAccess()</tt> or <tt>nextThread()</tt>. Assert that no
 	 * threads are waiting for access.
 	 */
 	public void acquire(KThread thread) {
 	    Lib.assertTrue(Machine.interrupt().disabled());
-		       
+		
 	    Lib.assertTrue(waitQueue.isEmpty());
 	}
 

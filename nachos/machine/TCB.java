@@ -1,5 +1,5 @@
 // PART OF THE MACHINE SIMULATION. DO NOT CHANGE.
-
+// For 线程控制
 package nachos.machine;
 
 import nachos.security.*;
@@ -89,10 +89,11 @@ public final class TCB {
 	    /* If this is not the first TCB, we have to make a new Java thread
 	     * to run it. Creating Java threads is a privileged operation.
 	     */
+//		创建一个Runable对象
 	    tcbTarget = new Runnable() {
 		    public void run() { threadroot(); }
 		};
-
+		
 	    privilege.doPrivileged(new Runnable() {
 		    public void run() { javaThread = new Thread(tcbTarget); }
 		});
@@ -118,7 +119,7 @@ public final class TCB {
 	    threadroot();
 	}
     }
-
+ 
     /**
      * Return the TCB of the currently running thread.
      */

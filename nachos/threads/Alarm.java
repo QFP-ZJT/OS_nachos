@@ -3,9 +3,7 @@ package nachos.threads;
 import nachos.machine.*;
 /** zjt P1 T3**/
 import java.util.TreeSet;
-import java.util.Iterator;
-import java.util.Scanner;
-import java.util.SortedSet;
+
 
 /** zjt P1 T3**/
 
@@ -26,7 +24,7 @@ public class Alarm {
 		waiting = new TreeSet<WaitingThread>();
 		/** zjt P1 T3 **/
 
-		// tick唤醒timerInterrupt
+		// tick唤醒timerInterrupt     为timer设定应该执行的方法
 		Machine.timer().setInterruptHandler(new Runnable() {
 			public void run() {
 				timerInterrupt();
@@ -41,7 +39,7 @@ public class Alarm {
 	 * should be run.
 	 */
 	public void timerInterrupt() {
-		// KThread.currentThread().yield();
+		KThread.currentThread().yield();
 		/** zjt P1 T3 **/
 		long time = Machine.timer().getTime();
 

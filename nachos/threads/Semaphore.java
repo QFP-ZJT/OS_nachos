@@ -33,6 +33,7 @@ public class Semaphore {
 
     /**
      * Atomically wait for this semaphore to become non-zero and decrement it.
+     * 获取资源
      */
     public void P() {
 	boolean intStatus = Machine.interrupt().disable();
@@ -51,6 +52,7 @@ public class Semaphore {
     /**
      * Atomically increment this semaphore and wake up at most one other thread
      * sleeping on this semaphore.
+     * 释放资源
      */
     public void V() {
 	boolean intStatus = Machine.interrupt().disable();
@@ -75,7 +77,9 @@ public class Semaphore {
 	public void run() {
 	    for (int i=0; i<10; i++) {
 		ping.P();
+		System.out.println("子线程消耗ping资源");
 		pong.V();
+		System.out.println("子线程增加pong资源");
 	    }
 	}
 
@@ -94,7 +98,9 @@ public class Semaphore {
 
 	for (int i=0; i<10; i++) {
 	    ping.V();
+	    System.out.println("主线程增加ping资源");
 	    pong.P();
+	    System.out.println("主线程消耗pong资源");
 	}
     }
 

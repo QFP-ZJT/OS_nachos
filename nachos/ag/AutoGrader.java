@@ -6,8 +6,7 @@ import nachos.machine.*;
 import nachos.security.*;
 import nachos.threads.*;
 
-import java.util.Hashtable;
-import java.util.StringTokenizer;
+import java.util.*;
 
 /**
  * The default autograder. Loads the kernel, and then tests it using

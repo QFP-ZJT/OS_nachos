@@ -92,9 +92,11 @@ public class Communicator {
 		}
 
 		public void run() {
-			// System.out.print(KThread.currentThread().getName()
-			// + " will speak " + this.word + "\n");
+//			 System.out.print(KThread.currentThread().getName()
+//			 + " will speak " + this.word + "\n");
 			comm.speak(this.word);
+//			System.out.print(KThread.currentThread().getName()
+//					 + " have speaked " + this.word + "\n");
 
 		}
 
@@ -109,6 +111,8 @@ public class Communicator {
 
 		public void run() {
 			int word = comm.listen();
+//			 System.out.print(KThread.currentThread().getName()
+//					 + " have listened " + word + "\n");
 		}
 
 		private Communicator comm;
@@ -211,8 +215,8 @@ public class Communicator {
 		}
 
 		KThread.yield();
-		t3[0].join();
-		speakerThread3.join();
+		t31[0].join();
+		speakerThread31.join();
 
 		System.out.print("\nVAR6: 先多人说 后多人听\n");
 

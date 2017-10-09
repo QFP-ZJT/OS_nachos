@@ -58,11 +58,9 @@ public class KThread {
 	public KThread() {
 		if (currentThread != null) {
 			tcb = new TCB();
-		} else {
+		} else {//创建第一个线程    窃取Java的线程作为自己的主线程
 			readyQueue = ThreadedKernel.scheduler.newThreadQueue(false);
-			/** zjt for P1 T1 **/
-			joinQueue = ThreadedKernel.scheduler.newThreadQueue(false);
-			/** zjt for P1 T1 **/
+
 			readyQueue.acquire(this);
 
 			currentThread = this;
@@ -209,9 +207,11 @@ public class KThread {
 
 		currentThread.status = statusFinished;
 		/** zjt for P1 T1 在线程结束时，将join队列中的线程唤醒到就绪队列 **/
-		KThread thread = currentThread.joinQueue.nextThread();
-		if (thread != null) {
-			thread.ready();
+		if (currentThread.joinQueue != null) {
+			KThread thread = currentThread.joinQueue.nextThread();
+			if (thread != null) {
+				thread.ready();
+			}
 		}
 		/** zjt for P1 T1 **/
 		sleep();
@@ -305,6 +305,9 @@ public class KThread {
 		if (KThread.currentThread.isJoined)
 			;// 使得当前正在运行的线程
 		else {
+			/** zjt for P1 T1 **/
+			joinQueue = ThreadedKernel.scheduler.newThreadQueue(true);
+			/** zjt for P1 T1 **/
 			joinQueue.waitForAccess(currentThread);
 			isJoined = true; // 一个线程join只能阻塞一个进程
 			sleep();// 当前进程睡眠等待被调用进程结束
@@ -434,7 +437,7 @@ public class KThread {
 		private int which;
 	}
 
-	/**zjt P1 T1**/
+	/** zjt P1 T1 **/
 	/**
 	 * 
 	 * @author QFP_ZJT zjt P1 T1 测试使用 for SuperJoiner
@@ -503,10 +506,11 @@ public class KThread {
 		}
 
 	}
-	/**zjt P1 T1**/
+
+	/** zjt P1 T1 **/
 
 	/**
-	 * Tests whether this module is working.
+	 * Tests whether this module is working.  for P1 T1
 	 */
 	public static void selfTest() {
 		Lib.debug(dbgThread, "Enter KThread.selfTest");
@@ -528,7 +532,7 @@ public class KThread {
 		// new KThread(new PingTest(1)).setName("forked thread").fork();
 		// new PingTest(0).run();
 	}
-
+	
 	private static final char dbgThread = 't';
 
 	/**
@@ -566,7 +570,7 @@ public class KThread {
 	private static int numCreated = 0;
 
 	private static ThreadQueue readyQueue = null;
-	/** zjt for P1 T1 由于自己的join而被阻塞的进程**/
+	/** zjt for P1 T1 由于自己的join而被阻塞的进程 **/
 	private ThreadQueue joinQueue = null;
 	/** zjt for P1 T1 **/
 	private static KThread currentThread = null;

@@ -1,10 +1,8 @@
 package nachos.threads;
 
 import nachos.machine.*;
-
-import java.util.TreeSet;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 
 /**
  * A scheduler that chooses threads based on their priorities.
@@ -48,12 +46,13 @@ public class PriorityScheduler extends Scheduler {
 	public int getPriority(KThread thread) {
 		Lib.assertTrue(Machine.interrupt().disabled());
 
+		/**从线程的ThreadState中得到线程的优先级**/
 		return getThreadState(thread).getPriority();
 	}
 
 	public int getEffectivePriority(KThread thread) {
 		Lib.assertTrue(Machine.interrupt().disabled());
-
+		/**得到有效优先级**/
 		return getThreadState(thread).getEffectivePriority();
 	}
 
@@ -64,7 +63,7 @@ public class PriorityScheduler extends Scheduler {
 
 		getThreadState(thread).setPriority(priority);
 	}
-
+// 增加当前线程的优先级
 	public boolean increasePriority() {
 		boolean intStatus = Machine.interrupt().disable();
 
@@ -135,16 +134,45 @@ public class PriorityScheduler extends Scheduler {
 			getThreadState(thread).waitForAccess(this);
 		}
 
+		// TODO 当什么时候执行？？？？？？？？？？？
+//		if a thread acquires a lock that no other threads are waiting for, it
+//	     should call this method.
 		public void acquire(KThread thread) {
 			Lib.assertTrue(Machine.interrupt().disabled());
 			getThreadState(thread).acquire(this);
+			/**zjt P1 T5**/
+			ThreadState state = getThreadState(thread);
+			// TODO 看不懂
+            if (this.holder != null && this.transferPriority) {
+                this.holder.myResource.remove(this);
+            }
+             
+            this.holder = state;
+             
+            state.acquire(this);
+            /**zjt P1 T5**/
 		}
 
 		public KThread nextThread() {
 			Lib.assertTrue(Machine.interrupt().disabled());
 			/**zjt P1 T5**/
-			
-			return null;
+			//没有等待队列，返回空
+			 if (waitQueue.isEmpty())
+	                return null;
+			 // 若还是看不懂
+			 if (this.holder != null && this.transferPriority)  
+	                this.holder.myResource.remove(this);
+			 
+			 KThread firstThread = pickNextThread();
+	            if (firstThread != null) {
+	                // 将优先级最高的队列移出等待队列
+	                waitQueue.remove(firstThread);
+	                // 
+	                getThreadState(firstThread).acquire(this);
+	            }
+	            
+	            return firstThread;
+			 
 		}
 
 		/**
@@ -152,22 +180,91 @@ public class PriorityScheduler extends Scheduler {
 		 * without modifying the state of this queue.
 		 *
 		 * @return the next thread that <tt>nextThread()</tt> would return.
+		 * 返回有效优先级最高的线程
 		 */
-		protected ThreadState pickNextThread() {
-			// implement me
-			return null;
+		protected KThread pickNextThread() {
+			/**zjt P1 T5**/
+			 KThread nextThread = null;
+			 for (Iterator<KThread> ts = waitQueue.iterator(); ts.hasNext();) {  
+	                KThread thread = ts.next(); 
+	                int priority = getThreadState(thread).getEffectivePriority();
+	                
+	                if (nextThread == null || priority > getThreadState(nextThread).getEffectivePriority()) { 
+	                    nextThread = thread;
+	                }
+	            }  
+	         return nextThread;
+	        /**zjt P1 T5**/
 		}
 
+		
+		public int getEffectivePriority() {
+
+            // System.out.print("[Inside getEffectivePriority] transferPriority: " + transferPriority + "\n"); // debug
+
+            // if do not transfer priority, return minimum priority
+            if (transferPriority == false) {
+            // System.out.print("Inside 'getEffectivePriority:' false branch\n" ); // debug
+                return priorityMinimum;
+            }
+
+            if (dirty) {
+                effectivePriority = priorityMinimum; 
+                for (Iterator<KThread> it = waitQueue.iterator(); it.hasNext();) {  
+                    KThread thread = it.next(); 
+                    int priority = getThreadState(thread).getEffectivePriority();
+                    if ( priority > effectivePriority) { 
+                        effectivePriority = priority;
+                    }
+                }
+                dirty = false;
+            }
+
+            return effectivePriority;
+        }
+
+		/**
+		 * 队列置dirty
+		 */
+        public void setDirty() {
+            if (transferPriority == false) {
+                return;
+            }
+
+            dirty = true;
+
+            if (holder != null) {
+                holder.setDirty();
+            }
+        }
+		
 		public void print() {
 			Lib.assertTrue(Machine.interrupt().disabled());
 			// implement me (if you want)
+			for (Iterator<KThread> it = waitQueue.iterator(); it.hasNext();) {  
+                KThread currentThread = it.next(); 
+                int  priority = getThreadState(currentThread).getPriority();
+
+                System.out.print("Thread: " + currentThread 
+                                    + "\t  Priority: " + priority + "\n");
+            }
 		}
 
 		/**
 		 * <tt>true</tt> if this queue should transfer priority from waiting
 		 * threads to the owning thread.
+		 * 即是否使用优先级调度队列
 		 */
 		public boolean transferPriority;
+		/** zjt for P1 T5 **/
+		/**资源等待队列**/
+		private LinkedList<KThread> waitQueue = new LinkedList<KThread>();
+		/**持有资源的线程的ThreadState**/
+		private ThreadState holder = null;
+		/** 优先级被更改时 **/
+		private boolean dirty;
+		/**waitQueue中的最高优先级 当!dirty时**/
+		private int effectivePriority; 
 	}
 
 	/**
@@ -188,7 +285,7 @@ public class PriorityScheduler extends Scheduler {
 		public ThreadState(KThread thread) {
 			this.thread = thread;
 
-			setPriority(priorityDefault);
+			setPriority(priorityDefault);//默认优先级
 		}
 
 		/**
@@ -203,11 +300,24 @@ public class PriorityScheduler extends Scheduler {
 		/**
 		 * Return the effective priority of the associated thread.
 		 *
-		 * @return the effective priority of the associated thread.
+		 * @return 若dirty返回myresource线程队列中的优先级最高的线程。
 		 */
 		public int getEffectivePriority() {
-			// implement me
-			return priority;
+			/** zjt for P1 T5 **/
+	        int maxEffective = this.priority;
+	        
+	        if (dirty) {
+	            for (Iterator<ThreadQueue> it = myResource.iterator(); it.hasNext();) {  
+	                PriorityQueue pg = (PriorityQueue)(it.next()); 
+	                int effective = pg.getEffectivePriority();
+	                if (maxEffective < effective) {
+	                    maxEffective = effective;
+	                }
+	            }
+	        }
+	            
+		    return maxEffective;
+		    /** zjt for P1 T5 **/
 		}
 
 		/**
@@ -223,6 +333,23 @@ public class PriorityScheduler extends Scheduler {
 			this.priority = priority;
 
 			// implement me
+			/** zjt for P1 T5 **/
+			setDirty();
+			/** zjt for P1 T5 **/
+		}
+
+		// 更改优先级时，置dirty
+		private void setDirty() {
+			if(dirty)
+				return;
+			dirty = true;
+			
+			PriorityQueue pg = (PriorityQueue)waitingOn;
+	        if (pg != null) {
+	        		//将阻碍自己的线程队列置为dirty
+	            pg.setDirty();
+	        }
+			
 		}
 
 		/**
@@ -236,9 +363,27 @@ public class PriorityScheduler extends Scheduler {
 		 *            the queue that the associated thread is now waiting on.
 		 *
 		 * @see nachos.threads.ThreadQueue#waitForAccess
+		 * 将线程重新放到等待队列
 		 */
 		public void waitForAccess(PriorityQueue waitQueue) {
-			// implement me
+			/** zjt for P1 T5 **/
+			/**copied from RR**/
+			Lib.assertTrue(Machine.interrupt().disabled());
+			waitQueue.waitQueue.add(thread);
+			waitQueue.setDirty();
+
+	        // set waitingOn
+	        waitingOn = waitQueue;
+
+	        // if the waitQueue was previously in myResource, remove it 
+	        // and set its holder to null
+	        // When will this IF statement be executed?
+	        if (myResource.indexOf(waitQueue) != -1) {
+	            myResource.remove(waitQueue);
+	            waitQueue.holder = null;
+	        }
+	        // TODO  搞不明白
+	        /** zjt for P1 T5 **/
 		}
 
 		/**
@@ -252,12 +397,83 @@ public class PriorityScheduler extends Scheduler {
 		 * @see nachos.threads.ThreadQueue#nextThread
 		 */
 		public void acquire(PriorityQueue waitQueue) {
-			// implement me
+			 /** zjt for P1 T5 **/
+		    Lib.assertTrue(Machine.interrupt().disabled());
+	        
+	        // add waitQueue to myResource list
+	        myResource.add(waitQueue);
+	        
+	        // clean waitingOn if waitQueue is just waiting on
+	        if (waitQueue == waitingOn) {
+	            waitingOn = null;
+	        }
+
+	        // 有效优先级可能发生变化
+	        setDirty();
+	        // TODO  搞不明白
+	        /** zjt for P1 T5 **/
 		}
 
 		/** The thread with which this object is associated. */
 		protected KThread thread;
 		/** The priority of the associated thread. */
 		protected int priority;
+		/** zjt for P1 T5 **/
+		/**有效优先级 */
+		private int  effectivePriority;
+		/**当优先级变化时 为true**/
+		private boolean dirty = false;
+		/**阻碍自己获得资源的线程**/
+		protected ThreadQueue waitingOn; 
+		/**该线程自己拥有的资源**/
+		protected LinkedList<ThreadQueue> myResource = new LinkedList<ThreadQueue>();
+		/** zjt for P1 T5 **/
 	}
+	/**
+	 * for 测试
+	 * @author zjtao
+	 *
+	 */
+	private static class PingTest implements Runnable {
+		PingTest(int which, Lock lock) {
+			this.which = which;
+			this.lock = lock;
+		}
+
+		public void run() {
+			for (int i = 0; i < 5; i++) {
+//				获得所之后输出
+ 
+				System.out.println("*** thread " + which + " looped " + i + " times");
+				KThread.yield();
+			}
+		}
+		private Lock lock;
+		private int which;
+	}
+	
+	/**
+	 * P1 T5 测试
+	 */
+	public static void selfTest_5() { 
+		Lock lock=new Lock(); 
+		lock.acquire();//主线程拿到锁 
+		KThread th1=new KThread(new PingTest(51,lock)); 
+		th1.setName("defu<1>号").fork();//fork后该线程会加入到就绪队列，并不立即执行 
+		KThread th2=new KThread(new PingTest(52,lock)); 
+		th2.setName("defu<2>号").fork();//fork后该线程会加入到就绪队列，并不立即执行 
+		boolean preStatus = Machine.interrupt().disable(); 
+		ThreadedKernel.scheduler.setPriority(1);
+		ThreadedKernel.scheduler.setPriority(th1, 3); 
+		ThreadedKernel.scheduler.setPriority(th2, 7); 
+		System.out.println("main1" + ThreadedKernel.scheduler.getEffectivePriority()); 
+		KThread.yield(); 
+		System.out.println("main2" + ThreadedKernel.scheduler.getEffectivePriority()); 
+		lock.release(); 
+		
+		Machine.interrupt().restore(preStatus); 
+		th1.join();
+	}
+	
+	
 }

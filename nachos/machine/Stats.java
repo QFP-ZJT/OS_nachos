@@ -92,7 +92,7 @@ public final class Stats {
     /**
      * The mean amount of simulated time between timer interrupts.
      */
-    public static final int TimerTicks = 500;
+    public static final int TimerTicks = 500;//设定的时间片。
     /**
      * The amount of simulated time required for an elevator to move a floor.
      */

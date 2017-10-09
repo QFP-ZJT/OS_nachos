@@ -49,15 +49,24 @@ public class ThreadedKernel extends Kernel {
 	 */
 	public void selfTest() {
 		/** zjt P1 T1 **/
-		KThread.selfTest();
+//		KThread.selfTest();
 		/** zjt P1 T2 **/
 //		Condition2.selfTest();
 		/** zjt P1 T3 **/
 //		Alarm.selfTest();
 		/** zjt P1 T4 **/
 //		Communicator.selfTest();
-		Semaphore.selfTest();
-		SynchList.selfTest();
+		/** zjt P1 T5 **/
+		PriorityScheduler.selfTest_5();
+		
+		
+//		Semaphore.selfTest();
+//		SynchList.selfTest();
+		
+		
+		
+		
+		
 		if (Machine.bank() != null) {
 			ElevatorBank.selfTest();
 		}
