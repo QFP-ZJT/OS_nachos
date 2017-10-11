@@ -354,6 +354,7 @@ public class KThread {
 
 		nextThread.run();
 	}
+		
 
 	/**
 	 * Dispatch the CPU to this thread. Save the state of the current thread,
@@ -537,7 +538,7 @@ public class KThread {
 
 	/**
 	 * Additional state used by schedulers.
-	 *
+	 *		P1 T5  使用到该对象
 	 * @see nachos.threads.PriorityScheduler.ThreadState
 	 */
 	public Object schedulingState = null;

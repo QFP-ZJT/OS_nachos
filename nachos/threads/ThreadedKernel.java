@@ -48,6 +48,7 @@ public class ThreadedKernel extends Kernel {
 	 * here.
 	 */
 	public void selfTest() {
+		
 		/** zjt P1 T1 **/
 //		KThread.selfTest();
 		/** zjt P1 T2 **/
@@ -57,8 +58,9 @@ public class ThreadedKernel extends Kernel {
 		/** zjt P1 T4 **/
 //		Communicator.selfTest();
 		/** zjt P1 T5 **/
-		PriorityScheduler.selfTest_5();
-		
+		PriorityScheduler.selfTest();
+		PriorityScheduler.selfTest2();
+//		
 		
 //		Semaphore.selfTest();
 //		SynchList.selfTest();

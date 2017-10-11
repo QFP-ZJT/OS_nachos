@@ -4,7 +4,7 @@ import nachos.machine.*;
 
 /**
  * Coordinates a group of thread queues of the same kind.
- *
+ * 优先级调度算法
  * @see	nachos.threads.ThreadQueue
  */
 public abstract class Scheduler {
