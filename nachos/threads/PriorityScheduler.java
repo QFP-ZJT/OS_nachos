@@ -503,6 +503,14 @@ public class PriorityScheduler extends Scheduler {
 	// }
 	
 	
+	
+	/**
+	 *  功能    可以测试出 join()方法的加入  是否会有贡献优先级的事情发生
+	 *  		 报告自己的优先级
+	 *  		 等待另一个线程的结束
+	 *  		 再次报告 自己结束
+	 *
+	 */
 	protected static class PrioritySchedulerTest implements Runnable 
 	{
 		PrioritySchedulerTest(int which,KThread thread) 
@@ -523,7 +531,11 @@ public class PriorityScheduler extends Scheduler {
 		private KThread joinThread;
 	}
 	
-	//用于测试的内部线程类
+	/**
+	 * 
+	 * 直接打印自己的优先级    然后结束
+	 *
+	 */
 	protected static class PrioritySchedulerTest2 implements Runnable 
 	{
 		PrioritySchedulerTest2(int which) 
@@ -540,7 +552,10 @@ public class PriorityScheduler extends Scheduler {
 		private int which;
 	}
 	
-	//用于测试的内部线程类
+	/**
+	 * 打印优先级 获得锁   yield()   再次打印优先级  释放锁    
+	 *
+	 */
 	protected static class PrioritySchedulerTest3 implements Runnable 
 	{
 		PrioritySchedulerTest3(int which,Lock lock) 
@@ -569,7 +584,11 @@ public class PriorityScheduler extends Scheduler {
 		private Lock lock;
 	}
 	
-	//用于测试的内部线程类
+	/**
+	 * 
+	 * 拿到锁     然后结束释放
+	 *
+	 */
 	protected static class PrioritySchedulerTest4 implements Runnable 
 	{
 		PrioritySchedulerTest4(int which,Lock lock) 
@@ -613,12 +632,14 @@ public class PriorityScheduler extends Scheduler {
 	//测试方法2，测试能否通过Lock完成优先级传递
 	public static void selfTest2()
 	{   //创建一个线程，优先级默认为1
+		System.out.println("进入锁   查看是否可以贡献优先级");
 		Lock lock = new Lock();
 		KThread t = new KThread(new PrioritySchedulerTest3(1,lock)).setName("thread 1");
 		t.fork();
 		//创建一个线程，优先级设为5，申请上一个线程占有的锁，测试优先级能否传递
 		KThread t2 = new KThread(new PrioritySchedulerTest4(2,lock)).setName("thread 2");
 		t2.fork();
+		t.join();
 
 	}
 	
