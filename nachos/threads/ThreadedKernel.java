@@ -58,8 +58,10 @@ public class ThreadedKernel extends Kernel {
 		/** zjt P1 T4 **/
 //		Communicator.selfTest();
 		/** zjt P1 T5 **/
-		PriorityScheduler.selfTest();
-		PriorityScheduler.selfTest2();
+//		PriorityScheduler.selfTest();
+//		PriorityScheduler.selfTest2();
+		/* zjt P1 T6 */
+		Boat.selfTest();
 //		
 		
 //		Semaphore.selfTest();
