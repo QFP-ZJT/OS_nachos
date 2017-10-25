@@ -33,8 +33,10 @@ public class UserKernel extends ThreadedKernel {
      * Test the console device.
      */	
     public void selfTest() {
-	super.selfTest();
+	super.selfTest();//会调用Kthread的线程的selftest
 
+	
+	
 	System.out.println("Testing the console device. Typed characters");
 	System.out.println("will be echoed until q is typed.");
 
@@ -91,13 +93,16 @@ public class UserKernel extends ThreadedKernel {
      */
     public void run() {
 	super.run();
-
-	UserProcess process = UserProcess.newUserProcess();
 	
+	UserProcess process = UserProcess.newUserProcess();
 	String shellProgram = Machine.getShellProgramName();	
 	Lib.assertTrue(process.execute(shellProgram, new String[] { }));
 
-	KThread.currentThread().finish();
+	KThread temp = KThread.currentThread();
+	if(temp == null)
+		System.out.println("NULL");
+	temp.finish();
+	System.out.println("推出？");
     }
 
     /**

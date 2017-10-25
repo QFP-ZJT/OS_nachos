@@ -332,6 +332,7 @@ public class KThread {
 
 		idleThread = new KThread(new Runnable() {
 			public void run() {
+				System.out.println("Running idle");
 				while (true)
 					yield();
 			}

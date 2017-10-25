@@ -194,10 +194,10 @@ int main(int argc, char *argv[]) {
     char buffer[BUFFERSIZE];
 
     while (1) {
-	printf("%s", prompt);
+	  printf("%s", prompt);
 
-	readline(buffer, BUFFERSIZE);
+	  readline(buffer, BUFFERSIZE);
 
-	runline(buffer);
+	  runline(buffer);
     }
 }

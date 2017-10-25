@@ -51,7 +51,7 @@ public class Communicator {
 		// 唤醒所有等待接听者
 		listenerCond.wakeAll();
 		speaker--;
-		System.out.println(Thread.currentThread().getName() + " speaks " + word);
+		System.out.println(KThread.currentThread().getName() + " speaks " + word);
 		lock.release();
 		/** zjt P1 T4 **/
 	}
@@ -78,7 +78,7 @@ public class Communicator {
 		isWordReady = false;
 
 		listener--;
-		System.out.println(Thread.currentThread().getName() + " listens a word  " + word);
+		System.out.println(KThread.currentThread().getName() + " listens a word  " + word);
 		lock.release();
 
 		return word;
