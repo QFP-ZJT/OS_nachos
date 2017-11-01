@@ -5,6 +5,7 @@ package nachos.machine;
 import nachos.machine.*;
 
 /**
+ * 虚拟内存与实际内存之间的关系
  * A single translation between a virtual page and a physical page.
  */
 public final class TranslationEntry {

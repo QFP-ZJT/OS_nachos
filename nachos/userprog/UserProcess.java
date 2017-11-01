@@ -5,7 +5,6 @@ import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.io.EOFException;
-import java.io.PipedInputStream;
 import java.util.LinkedList;
 
 /**
@@ -26,21 +25,25 @@ public class UserProcess {
 	 */
 	public UserProcess() {
 		openfile = new OpenFile[16];
-		
+
+		int numPhysPages = Machine.processor().getNumPhysPages();
+		pageTable = new TranslationEntry[numPhysPages];// 在配置文件中定义了物理内存的大小
+		// 初始化页表   在但线程的时候将所有的资源私有化
+//		for (int i = 0; i < numPhysPages; i++)
+			// VPS PPS trans? RO used? dirty?
+//			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+		// Processor.translate()实现虚实地址的转换
+		// UserProcess.restoreState()将页表传递给CPU
+		// UThread.restoreState()-->UserProcess.restoreState()
+		// UThread.runProgram()-->UserProcess.restoreState()
 		// 设置标准输入输出
 		this.openfile[0] = UserKernel.console.openForReading();
 		this.openfile[1] = UserKernel.console.openForWriting();
-		
-		
-		
-//		pidLock.acquire();
-//	    pid = nextPid++;
-//	    numOfRunningProcess++;
-//	    pidLock.release();
-		int numPhysPages = Machine.processor().getNumPhysPages();
-		pageTable = new TranslationEntry[numPhysPages];
-		for (int i = 0; i < numPhysPages; i++)
-			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+
+		// pidLock.acquire();
+		// pid = nextPid++;
+		// numOfRunningProcess++;
+		// pidLock.release();
 	}
 
 	/**
@@ -153,13 +156,31 @@ public class UserProcess {
 		byte[] memory = Machine.processor().getMemory();
 
 		// for now, just assume that virtual addresses equal physical addresses
-		if (vaddr < 0 || vaddr >= memory.length)
+		// 现在的大小是页大小乘页数量
+		if (vaddr < 0 || vaddr >= pageSize * numPages)
 			return 0;
 
-		int amount = Math.min(length, memory.length - vaddr);
-		System.arraycopy(memory, vaddr, data, offset, amount);
+		if ((length + vaddr) > pageSize * numPages)
+			length = pageSize * numPages - vaddr;
 
-		return amount;
+		int readByte = 0;
+		while (readByte < length) {
+			// 内存地址 / pagesize = 虚拟页数
+			int pageN = Processor.pageFromAddress(vaddr + readByte);
+			if (pageN < 0 || pageN >= pageTable.length)
+				return 0;
+			// 内存地址 % pagesize = 页便宜
+			int pageO = Processor.offsetFromAddress(vaddr + readByte);
+			// 该页中剩余的内容
+			int byteNum = pageSize - pageO;
+			// 取有与需要的最小值
+			int amount = Math.min(byteNum, length - readByte);
+			int phyAddr = pageTable[pageN].ppn * pageSize + pageO;// 页表映射
+			// src src.start des des.start mount
+			System.arraycopy(memory, phyAddr, data, offset + readByte, amount);
+			readByte += amount;
+		}
+		return readByte;
 	}
 
 	/**
@@ -198,13 +219,29 @@ public class UserProcess {
 		byte[] memory = Machine.processor().getMemory();
 
 		// for now, just assume that virtual addresses equal physical addresses
-		if (vaddr < 0 || vaddr >= memory.length)
+		if (vaddr < 0 || vaddr >= pageSize * numPages)
 			return 0;
-
-		int amount = Math.min(length, memory.length - vaddr);
-		System.arraycopy(data, offset, memory, vaddr, amount);
-
-		return amount;
+		if (length + vaddr > pageSize * numPages)// 长度超过限制
+			length = pageSize * numPages - vaddr;
+		if (data.length - offset > length)//提取的数量
+			length = data.length - offset;
+		int writebyte = 0;
+		while(writebyte<length) {
+			int pageN = Processor.pageFromAddress(vaddr + writebyte);
+			if (pageN < 0 || pageN >= pageTable.length)
+				return 0;
+			// 内存地址 % pagesize = 页偏移
+			int pageO = Processor.offsetFromAddress(vaddr + writebyte);
+			// 该页中剩余可写
+			int byteNum = pageSize - pageO;
+			// 取有与需要的最小值
+			int amount = Math.min(byteNum, length - writebyte);
+			int phyAddr = pageTable[pageN].ppn * pageSize + pageO;// 页表映射
+			// src src.start des des.start mount
+			System.arraycopy(data, offset+writebyte, memory, phyAddr, amount);
+			writebyte += amount;
+		}
+		return writebyte;
 	}
 
 	/**
@@ -302,12 +339,24 @@ public class UserProcess {
 	 *
 	 * @return <tt>true</tt> if the sections were successfully loaded.
 	 */
+	//zjt 分配页表
 	protected boolean loadSections() {
-		if (numPages > Machine.processor().getNumPhysPages()) {
+		//多线程，加锁
+		UserKernel.lock.acquire();
+		//所需大于空闲页表的需要   其中numpages的值由load()方法确定  现在开辟空间
+		if (numPages > UserKernel.freePage.size()) {
 			coff.close();
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
 			return false;
 		}
+		//初始化创建页表
+		pageTable = new TranslationEntry[numPages];
+		for (int i=0; i<numPages; i++)
+		{   //从全局空闲页表中拿出一页，进行分配
+			int ppn = UserKernel.freePage.remove();
+			pageTable[i] = new TranslationEntry(i,ppn, true,false,false,false);
+		}
+		UserKernel.lock.release();
 
 		// load sections
 		for (int s = 0; s < coff.getNumSections(); s++) {
@@ -318,9 +367,8 @@ public class UserProcess {
 
 			for (int i = 0; i < section.getLength(); i++) {
 				int vpn = section.getFirstVPN() + i;
-
-				// for now, just assume virtual addresses=physical addresses
-				section.loadPage(i, vpn);
+				pageTable[vpn].readOnly=section.isReadOnly();//传递内存是否已经被读写
+				section.loadPage(i, pageTable[vpn].ppn);
 			}
 		}
 
@@ -331,6 +379,10 @@ public class UserProcess {
 	 * Release any resources allocated by <tt>loadSections()</tt>.
 	 */
 	protected void unloadSections() {
+		UserKernel.lock.acquire();
+		for(int i = 0;i<numPages;i++)
+			UserKernel.freePage.add(pageTable[i].ppn);
+		UserKernel.lock.release();
 	}
 
 	/**
@@ -361,7 +413,7 @@ public class UserProcess {
 	 */
 	private int handleHalt() {
 
-		//判断是否是root进程 TODO
+		// 判断是否是root进程 TODO
 		Machine.halt();
 
 		Lib.assertNotReached("Machine.halt() did not halt machine!");
@@ -443,17 +495,17 @@ public class UserProcess {
 		case syscallHalt:
 			return handleHalt();
 		case syscallCreate:
-			return handleCreate(a0);//a0 文件名称在虚拟内存中的地址
+			return handleCreate(a0);// a0 文件名称在虚拟内存中的地址
 		case syscallOpen:
 			return handleOpen(a0);
 		case syscallRead:
-			return handleRead(a0, a1, a2);//文件名称的地址    写入到虚拟内存的地址   写入内容的长度
+			return handleRead(a0, a1, a2);// 文件名称的地址 写入到虚拟内存的地址 写入内容的长度
 		case syscallWrite:
-			return handleWrite(a0, a1, a2);//文件名称的地址    读取虚拟内存的地址   写入内容的长度
+			return handleWrite(a0, a1, a2);// 文件名称的地址 读取虚拟内存的地址 写入内容的长度
 		case syscallUnlink:
-			return handleUnlink(a0);//a0 文件名称在虚拟内存中的地址
+			return handleUnlink(a0);// a0 文件名称在虚拟内存中的地址
 		case syscallClose:
-			return handleClose(a0);//a0 文件名称在虚拟内存中的地址
+			return handleClose(a0);// a0 文件名称在虚拟内存中的地址
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
 			Lib.assertNotReached("Unknown system call!");
@@ -505,7 +557,7 @@ public class UserProcess {
 		if (fd < 0 || fd >= openfile.length || openfile[fd] == null)
 			return -1;
 		// 读取内存
-		byte buffer_temp[] = null;
+		byte buffer_temp[] = new byte[size];
 
 		int len = readVirtualMemory(buffer, buffer_temp);
 		// 数量小于0，出错
@@ -524,11 +576,11 @@ public class UserProcess {
 	/**
 	 * 读取文件
 	 * 
-	 * @param fileDescriptor
+	 * @param fd
 	 *            文件标志符
-	 * @param bufferAddress
+	 * @param buffer
 	 *            缓冲的位置
-	 * @param count
+	 * @param size
 	 *            读取的长度
 	 * @return 返回写入虚拟内存中的真实大小
 	 */
@@ -618,7 +670,7 @@ public class UserProcess {
 			if (fileCounts.get(i).filename.equals(filename)) {
 				if (!unlinkFiles.contains(filename))
 					unlinkFiles.add(filename);
-//				if(fileCounts.get(i).count==0)//如果文件直接被删除
+				// if(fileCounts.get(i).count==0)//如果文件直接被删除
 				lock.release();
 				break;
 			}
@@ -776,6 +828,8 @@ public class UserProcess {
 	private static LinkedList<String> unlinkFiles = new LinkedList<String>();
 	// 实现文件的互斥访问
 	public static Lock lock;
+
+	public static Lock numLock;
 
 	/**
 	 * 补充类 文件管理类 实现的功能 记录文件名称 和 被打开的次数

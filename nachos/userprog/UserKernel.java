@@ -1,5 +1,7 @@
 package nachos.userprog;
 
+import java.util.LinkedList;
+
 import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
@@ -13,6 +15,10 @@ public class UserKernel extends ThreadedKernel {
      */
     public UserKernel() {
 	super();
+	//初始化， 所有页表均为空闲页表
+	int num = Machine.processor().getNumPhysPages();
+	for(int i=0;i<num;i++)
+		freePage.add(i);
     }
 
     /**
@@ -27,7 +33,11 @@ public class UserKernel extends ThreadedKernel {
 	Machine.processor().setExceptionHandler(new Runnable() {
 		public void run() { exceptionHandler(); }
 	    });
+	lock = new Lock();				 //页表资源的分配
+	UserProcess.lock = new Lock();    //文件标志符的锁
+	UserProcess.numLock = new Lock(); //线程数量
     }
+    
 
     /**
      * Test the console device.
@@ -37,18 +47,18 @@ public class UserKernel extends ThreadedKernel {
 
 	
 	
-	System.out.println("Testing the console device. Typed characters");
-	System.out.println("will be echoed until q is typed.");
-
-	char c;
-
-	do {
-	    c = (char) console.readByte(true);
-	    console.writeByte(c);
-	}
-	while (c != 'q');
-
-	System.out.println("");
+//	System.out.println("Testing the console device. Typed characters");
+//	System.out.println("will be echoed until q is typed.");
+//
+//	char c;
+//
+//	do {
+//	    c = (char) console.readByte(true);
+//	    console.writeByte(c);
+//	}
+//	while (c != 'q');
+//
+//	System.out.println("");
     }
 
     /**
@@ -95,14 +105,10 @@ public class UserKernel extends ThreadedKernel {
 	super.run();
 	
 	UserProcess process = UserProcess.newUserProcess();
-	String shellProgram = Machine.getShellProgramName();	
-	Lib.assertTrue(process.execute(shellProgram, new String[] { }));
 
-	KThread temp = KThread.currentThread();
-	if(temp == null)
-		System.out.println("NULL");
-	temp.finish();
-	System.out.println("推出？");
+	String shellProgram = Machine.getShellProgramName();
+	Lib.assertTrue(process.execute(shellProgram, new String[] {}));
+	KThread.currentThread().finish();
     }
 
     /**
@@ -117,4 +123,8 @@ public class UserKernel extends ThreadedKernel {
 
     // dummy variables to make javac smarter
     private static Coff dummy1 = null;
+    
+    // zjt
+    public static LinkedList<Integer> freePage= new LinkedList<Integer>();//管理空闲页表
+    static Lock lock;//实现多线程的资源互斥
 }
