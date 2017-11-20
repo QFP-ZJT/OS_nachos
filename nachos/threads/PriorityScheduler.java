@@ -41,7 +41,7 @@ public class PriorityScheduler extends Scheduler {
 	 */
 	public ThreadQueue newThreadQueue(boolean transferPriority) {
 		// PL
-//		System.out.println("调用了优先级调用生成队列");
+		// System.out.println("调用了优先级调用生成队列");
 		return new PriorityQueue(transferPriority);
 	}
 
@@ -163,7 +163,7 @@ public class PriorityScheduler extends Scheduler {
 			// 重新设置该队列锁的持有者
 			holder = getThreadState(thread);
 			for (KThread t : waitQueue) {
-				// 更新队列中中的lockholder    转告等待队列中的线程的持有这是谁   
+				// 更新队列中中的lockholder 转告等待队列中的线程的持有这是谁
 				getThreadState(t).acquire(this);
 			}
 			/** zjt P1 T5 **/
@@ -181,7 +181,7 @@ public class PriorityScheduler extends Scheduler {
 				// 将优先级最高的队列移出等待队列
 				waitQueue.remove(firstThread);
 				// 更新lockholder
-				getThreadState(firstThread).acquire(this);
+				acquire(getThreadState(firstThread).thread);
 			}
 
 			return firstThread;
@@ -257,9 +257,9 @@ public class PriorityScheduler extends Scheduler {
 			for (Iterator<KThread> it = waitQueue.iterator(); it.hasNext();) {
 				KThread currentThread = it.next();
 				int priority = getThreadState(currentThread).getPriority();
-
 				System.out.print("Thread: " + currentThread + "\t  Priority: " + priority + "\n");
 			}
+			System.out.println("holder:" + holder);
 		}
 
 		/**
@@ -269,13 +269,18 @@ public class PriorityScheduler extends Scheduler {
 		public boolean transferPriority;
 		/** zjt for P1 T5 **/
 		/** 资源等待队列 **/
-		private LinkedList<KThread> waitQueue = new LinkedList<KThread>();
+		public LinkedList<KThread> waitQueue = new LinkedList<KThread>();
 		/** 持有资源的线程的ThreadState **/
-		private ThreadState holder = null;
+		protected ThreadState holder = null;
 		/** 优先级被更改时 **/
 		// private boolean dirty;
 		/** waitQueue中的最高优先级 当!dirty时 **/
-		private int effectivePriority;
+		protected int effectivePriority;
+		@Override
+		public int geteffpri() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
 	}
 
 	/**
@@ -311,24 +316,24 @@ public class PriorityScheduler extends Scheduler {
 		/**
 		 * Return the effective priority of the associated thread.
 		 *
-		 * @return 
+		 * @return
 		 */
 		public int getEffectivePriority() {
 			/** zjt for P1 T5 **/
 			return priority;
-//			int maxEffective = this.priority;
-//
-//			if (dirty) {
-//				for (Iterator<ThreadQueue> it = myResource.iterator(); it.hasNext();) {
-//					PriorityQueue pg = (PriorityQueue) (it.next());
-//					int effective = pg.getEffectivePriority();
-//					if (maxEffective < effective) {
-//						maxEffective = effective;
-//					}
-//				}
-//			}
-//
-//			return maxEffective;
+			// int maxEffective = this.priority;
+			//
+			// if (dirty) {
+			// for (Iterator<ThreadQueue> it = myResource.iterator(); it.hasNext();) {
+			// PriorityQueue pg = (PriorityQueue) (it.next());
+			// int effective = pg.getEffectivePriority();
+			// if (maxEffective < effective) {
+			// maxEffective = effective;
+			// }
+			// }
+			// }
+			//
+			// return maxEffective;
 			/** zjt for P1 T5 **/
 		}
 
@@ -342,7 +347,7 @@ public class PriorityScheduler extends Scheduler {
 			if (this.priority == priority)
 				return;
 
-			this.priority = priority;
+			// this.priority = priority;
 
 			// implement me
 			/** zjt for P1 T5 **/
@@ -356,19 +361,19 @@ public class PriorityScheduler extends Scheduler {
 			/** zjt for P1 T5 **/
 		}
 
-//		// 更改优先级时，置dirty
-//		private void setDirty() {
-//			if (dirty)
-//				return;
-//			dirty = true;
-//
-//			PriorityQueue pg = (PriorityQueue) waitingOn;
-//			if (pg != null) {
-//				// 将阻碍自己的线程队列置为dirty
-//				pg.setDirty();
-//			}
-//
-//		}
+		// // 更改优先级时，置dirty
+		// private void setDirty() {
+		// if (dirty)
+		// return;
+		// dirty = true;
+		//
+		// PriorityQueue pg = (PriorityQueue) waitingOn;
+		// if (pg != null) {
+		// // 将阻碍自己的线程队列置为dirty
+		// pg.setDirty();
+		// }
+		//
+		// }
 
 		/**
 		 * Called when <tt>waitForAccess(thread)</tt> (where <tt>thread</tt> is the
@@ -390,7 +395,7 @@ public class PriorityScheduler extends Scheduler {
 			waitQueue.waitQueue.add(thread);
 
 			// set waitingOn
-//			waitingOn = waitQueue;
+			// waitingOn = waitQueue;
 
 			// if the waitQueue was previously in myResource, remove it
 			// and set its holder to null
@@ -417,7 +422,7 @@ public class PriorityScheduler extends Scheduler {
 			/** zjt for P1 T5 **/
 			Lib.assertTrue(Machine.interrupt().disabled());
 
-//			更新锁的持有者
+			// 更新锁的持有者
 			lockHolder = waitQueue.holder;
 			/** zjt for P1 T5 **/
 		}
@@ -430,26 +435,27 @@ public class PriorityScheduler extends Scheduler {
 				ResourceIwanted.setPriority(priority);
 			}
 			// 持有锁是老大,且不是正在执行的，我的优先级给他
-			if (lockHolder != null /*&& lockHolder != KThread.currentThread()*/
+			if (lockHolder != null /* && lockHolder != KThread.currentThread() */
 					&& lockHolder.getEffectivePriority() < priority) {
 				lockHolder.setPriority(priority);
 			}
 		}
 
 		/** The thread with which this object is associated. */
-		protected KThread thread;//他爸爸
+		protected KThread thread;// 他爸爸
 		/** The priority of the associated thread. */
 		protected int priority;
 		/** zjt for P1 T5 **/
 		/** 有效优先级 */
-//		private int effectivePriority;
+		// private int effectivePriority;
 		/** 当优先级变化时 为true **/
 		// private boolean dirty = false;
 		/** 自己想要获得资源的线程 即自己正在等待的线程 **/
 		protected ThreadState ResourceIwanted;
 		/** 自己占有资源的线程队列 **/
-//		protected LinkedList<ThreadQueue> ResourceIhaved = new LinkedList<ThreadQueue>();
-		//当前持有锁的线程
+		// protected LinkedList<ThreadQueue> ResourceIhaved = new
+		// LinkedList<ThreadQueue>();
+		// 当前持有锁的线程
 		protected ThreadState lockHolder;
 		/** zjt for P1 T5 **/
 	}
@@ -501,153 +507,146 @@ public class PriorityScheduler extends Scheduler {
 	// Machine.interrupt().restore(preStatus);
 	// th1.join();
 	// }
-	
-	
-	
+
 	/**
-	 *  功能    可以测试出 join()方法的加入  是否会有贡献优先级的事情发生
-	 *  		 报告自己的优先级
-	 *  		 等待另一个线程的结束
-	 *  		 再次报告 自己结束
+	 * 功能 可以测试出 join()方法的加入 是否会有贡献优先级的事情发生 报告自己的优先级 等待另一个线程的结束 再次报告 自己结束
 	 *
 	 */
-	protected static class PrioritySchedulerTest implements Runnable 
-	{
-		PrioritySchedulerTest(int which,KThread thread) 
-		{
+	protected static class PrioritySchedulerTest implements Runnable {
+		PrioritySchedulerTest(int which, KThread thread) {
 			this.which = which;
 			joinThread = thread;
 		}
-		public void run() 
-		{
+
+		public void run() {
 			boolean status = Machine.interrupt().disable();
-			System.out.println("*** thread " + which + " priority is "+ThreadedKernel.scheduler.getEffectivePriority());
+			System.out
+					.println("*** thread " + which + " priority is " + ThreadedKernel.scheduler.getEffectivePriority());
 			Machine.interrupt().setStatus(status);
-			System.out.println("*** thread " + which + " join "+joinThread.getName());
-			joinThread.join();//join目标线程，测试优先级能否传递
+			System.out.println("*** thread " + which + " join " + joinThread.getName());
+			joinThread.join();// join目标线程，测试优先级能否传递
 			System.out.println("*** thread " + which + " finish ");
 		}
+
 		private int which;
 		private KThread joinThread;
 	}
-	
+
 	/**
 	 * 
-	 * 直接打印自己的优先级    然后结束
+	 * 直接打印自己的优先级 然后结束
 	 *
 	 */
-	protected static class PrioritySchedulerTest2 implements Runnable 
-	{
-		PrioritySchedulerTest2(int which) 
-		{
+	protected static class PrioritySchedulerTest2 implements Runnable {
+		PrioritySchedulerTest2(int which) {
 			this.which = which;
 		}
-		public void run() 
-		{
+
+		public void run() {
 			boolean status = Machine.interrupt().disable();
-			System.out.println("*** thread " + which + " priority is "+ThreadedKernel.scheduler.getEffectivePriority());
+			System.out
+					.println("*** thread " + which + " priority is " + ThreadedKernel.scheduler.getEffectivePriority());
 			Machine.interrupt().setStatus(status);
 			System.out.println("*** thread " + which + " finish ");
 		}
+
 		private int which;
 	}
-	
+
 	/**
-	 * 打印优先级 获得锁   yield()   再次打印优先级  释放锁    
+	 * 打印优先级 获得锁 yield() 再次打印优先级 释放锁
 	 *
 	 */
-	protected static class PrioritySchedulerTest3 implements Runnable 
-	{
-		PrioritySchedulerTest3(int which,Lock lock) 
-		{
+	protected static class PrioritySchedulerTest3 implements Runnable {
+		PrioritySchedulerTest3(int which, Lock lock) {
 			this.which = which;
 			this.lock = lock;
 		}
-		public void run() 
-		{
+
+		public void run() {
 			boolean status = Machine.interrupt().disable();
-			System.out.println("*** thread " + which + " priority is "+ThreadedKernel.scheduler.getEffectivePriority());
+			System.out
+					.println("*** thread " + which + " priority is " + ThreadedKernel.scheduler.getEffectivePriority());
 			Machine.interrupt().setStatus(status);
 			System.out.println("*** thread " + which + " acquire lock");
-			
+
 			lock.acquire();
 			KThread.yield();
-			
+
 			status = Machine.interrupt().disable();
-			System.out.println("*** thread " + which + " priority is "+ThreadedKernel.scheduler.getEffectivePriority());
+			System.out
+					.println("*** thread " + which + " priority is " + ThreadedKernel.scheduler.getEffectivePriority());
 			Machine.interrupt().setStatus(status);
-			
+
 			lock.release();
 			System.out.println("*** thread " + which + " finish ");
 		}
+
 		private int which;
 		private Lock lock;
 	}
-	
+
 	/**
 	 * 
-	 * 拿到锁     然后结束释放
+	 * 拿到锁 然后结束释放
 	 *
 	 */
-	protected static class PrioritySchedulerTest4 implements Runnable 
-	{
-		PrioritySchedulerTest4(int which,Lock lock) 
-		{
+	protected static class PrioritySchedulerTest4 implements Runnable {
+		PrioritySchedulerTest4(int which, Lock lock) {
 			this.which = which;
 			this.lock = lock;
 		}
-		public void run() 
-		{
+
+		public void run() {
 			boolean status = Machine.interrupt().disable();
 			ThreadedKernel.scheduler.setPriority(5);
-			System.out.println("*** thread " + which + " priority is "+ThreadedKernel.scheduler.getEffectivePriority());
+			System.out
+					.println("*** thread " + which + " priority is " + ThreadedKernel.scheduler.getEffectivePriority());
 			Machine.interrupt().setStatus(status);
 			System.out.println("*** thread " + which + " acquire lock");
-			
+
 			lock.acquire();
-		
+
 			System.out.println("*** thread " + which + " finish ");
 		}
+
 		private int which;
 		private Lock lock;
 	}
-	
-	//测试方法1，测试join中能否完成优先级传递
-	public static void selfTest()
-	{   //创建一个线程，优先级默认为1
+
+	// 测试方法1，测试join中能否完成优先级传递
+	public static void selfTest() { // 创建一个线程，优先级默认为1
 		KThread t = new KThread(new PrioritySchedulerTest2(1)).setName("thread 1");
 		t.fork();
-		//创建一个线程，优先级设为3，join上一个线程，测试优先级能否传递
-		KThread t2 = new KThread(new PrioritySchedulerTest(2,t)).setName("thread 2");
-		((PriorityScheduler)ThreadedKernel.scheduler).getThreadState(t2).setPriority(3);
+		// 创建一个线程，优先级设为3，join上一个线程，测试优先级能否传递
+		KThread t2 = new KThread(new PrioritySchedulerTest(2, t)).setName("thread 2");
+		((PriorityScheduler) ThreadedKernel.scheduler).getThreadState(t2).setPriority(3);
 		t2.fork();
-		//创建一个线程，优先级设为5，join上一个线程，测试优先级能否传递
-		KThread t3 = new KThread(new PrioritySchedulerTest(3,t2)).setName("thread 3");
-		((PriorityScheduler)ThreadedKernel.scheduler).getThreadState(t3).setPriority(5);
+		// 创建一个线程，优先级设为5，join上一个线程，测试优先级能否传递
+		KThread t3 = new KThread(new PrioritySchedulerTest(3, t2)).setName("thread 3");
+		((PriorityScheduler) ThreadedKernel.scheduler).getThreadState(t3).setPriority(5);
 		t3.fork();
-		
-		t.join();
-	}
-	
-	//测试方法2，测试能否通过Lock完成优先级传递
-	public static void selfTest2()
-	{   //创建一个线程，优先级默认为1
-		System.out.println("进入锁   查看是否可以贡献优先级");
-		Lock lock = new Lock();
-		KThread t = new KThread(new PrioritySchedulerTest3(1,lock)).setName("thread 1");
-		t.fork();
-		//创建一个线程，优先级设为5，申请上一个线程占有的锁，测试优先级能否传递
-		KThread t2 = new KThread(new PrioritySchedulerTest4(2,lock)).setName("thread 2");
-		t2.fork();
+
+		boolean status = Machine.interrupt().disable();
+		KThread.readyQueue.print();
+		((PriorityScheduler) ThreadedKernel.scheduler).getThreadState(KThread.currentThread()).setPriority(7);
+		Machine.interrupt().setStatus(status);
+
+		// KThread.yield();
 		t.join();
 
 	}
-	
-	
-	
-	
-	
-	
-	
+
+	// 测试方法2，测试能否通过Lock完成优先级传递
+	public static void selfTest2() { // 创建一个线程，优先级默认为1
+		System.out.println("进入锁   查看是否可以贡献优先级");
+		Lock lock = new Lock();
+		KThread t = new KThread(new PrioritySchedulerTest3(1, lock)).setName("thread 1");
+		t.fork();
+		// 创建一个线程，优先级设为5，申请上一个线程占有的锁，测试优先级能否传递
+		KThread t2 = new KThread(new PrioritySchedulerTest4(2, lock)).setName("thread 2");
+		t2.fork();
+		t.join();
+	}
 
 }

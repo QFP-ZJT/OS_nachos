@@ -34,8 +34,6 @@ public class UserKernel extends ThreadedKernel {
 		public void run() { exceptionHandler(); }
 	    });
 	lock = new Lock();				 //页表资源的分配
-	UserProcess.lock = new Lock();    //文件标志符的锁
-	UserProcess.numLock = new Lock(); //线程数量
     }
     
 
@@ -43,7 +41,7 @@ public class UserKernel extends ThreadedKernel {
      * Test the console device.
      */	
     public void selfTest() {
-	super.selfTest();//会调用Kthread的线程的selftest
+//	super.selfTest();//会调用Kthread的线程的selftest
 
 	
 	
@@ -108,7 +106,7 @@ public class UserKernel extends ThreadedKernel {
 
 	String shellProgram = Machine.getShellProgramName();
 	Lib.assertTrue(process.execute(shellProgram, new String[] {}));
-	KThread.currentThread().finish();
+	KThread.finish();
     }
 
     /**

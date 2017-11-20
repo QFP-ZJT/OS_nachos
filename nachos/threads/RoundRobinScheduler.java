@@ -80,5 +80,11 @@ public class RoundRobinScheduler extends Scheduler {
 	}
 
 	private LinkedList<KThread> waitQueue = new LinkedList<KThread>();
+
+	@Override
+	public int geteffpri() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
     }
 }

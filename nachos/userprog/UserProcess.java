@@ -2,7 +2,6 @@ package nachos.userprog;
 
 import nachos.machine.*;
 import nachos.threads.*;
-import nachos.userprog.*;
 
 import java.io.EOFException;
 import java.util.LinkedList;
@@ -28,10 +27,10 @@ public class UserProcess {
 
 		int numPhysPages = Machine.processor().getNumPhysPages();
 		pageTable = new TranslationEntry[numPhysPages];// 在配置文件中定义了物理内存的大小
-		// 初始化页表   在但线程的时候将所有的资源私有化
-//		for (int i = 0; i < numPhysPages; i++)
-			// VPS PPS trans? RO used? dirty?
-//			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+		// 初始化页表 在但线程的时候将所有的资源私有化
+		// for (int i = 0; i < numPhysPages; i++)
+		// VPS PPS trans? RO used? dirty?
+		// pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
 		// Processor.translate()实现虚实地址的转换
 		// UserProcess.restoreState()将页表传递给CPU
 		// UThread.restoreState()-->UserProcess.restoreState()
@@ -40,10 +39,10 @@ public class UserProcess {
 		this.openfile[0] = UserKernel.console.openForReading();
 		this.openfile[1] = UserKernel.console.openForWriting();
 
-		// pidLock.acquire();
-		// pid = nextPid++;
-		// numOfRunningProcess++;
-		// pidLock.release();
+		pidlock.acquire();
+		pid = Staticpid++;
+		numOfRunningProcess++;
+		pidlock.release();
 	}
 
 	/**
@@ -72,7 +71,6 @@ public class UserProcess {
 			return false;
 		}
 		new UThread(this).setName(name).fork();
-		System.out.println("execute 成功");
 		return true;
 	}
 
@@ -223,10 +221,10 @@ public class UserProcess {
 			return 0;
 		if (length + vaddr > pageSize * numPages)// 长度超过限制
 			length = pageSize * numPages - vaddr;
-		if (data.length - offset > length)//提取的数量
+		if (data.length - offset < length)// 提取的数量  若有的少于需要转移的则减少需要写入的数据数量
 			length = data.length - offset;
 		int writebyte = 0;
-		while(writebyte<length) {
+		while (writebyte < length) {
 			int pageN = Processor.pageFromAddress(vaddr + writebyte);
 			if (pageN < 0 || pageN >= pageTable.length)
 				return 0;
@@ -238,7 +236,7 @@ public class UserProcess {
 			int amount = Math.min(byteNum, length - writebyte);
 			int phyAddr = pageTable[pageN].ppn * pageSize + pageO;// 页表映射
 			// src src.start des des.start mount
-			System.arraycopy(data, offset+writebyte, memory, phyAddr, amount);
+			System.arraycopy(data, offset + writebyte, memory, phyAddr, amount);
 			writebyte += amount;
 		}
 		return writebyte;
@@ -339,22 +337,21 @@ public class UserProcess {
 	 *
 	 * @return <tt>true</tt> if the sections were successfully loaded.
 	 */
-	//zjt 分配页表
+	// zjt 分配页表
 	protected boolean loadSections() {
-		//多线程，加锁
+		// 多线程，加锁
 		UserKernel.lock.acquire();
-		//所需大于空闲页表的需要   其中numpages的值由load()方法确定  现在开辟空间
+		// 所需大于空闲页表的需要 其中numpages的值由load()方法确定 现在开辟空间
 		if (numPages > UserKernel.freePage.size()) {
 			coff.close();
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
 			return false;
 		}
-		//初始化创建页表
+		// 初始化创建页表
 		pageTable = new TranslationEntry[numPages];
-		for (int i=0; i<numPages; i++)
-		{   //从全局空闲页表中拿出一页，进行分配
+		for (int i = 0; i < numPages; i++) { // 从全局空闲页表中拿出一页，进行分配
 			int ppn = UserKernel.freePage.remove();
-			pageTable[i] = new TranslationEntry(i,ppn, true,false,false,false);
+			pageTable[i] = new TranslationEntry(i, ppn, true, false, false, false);
 		}
 		UserKernel.lock.release();
 
@@ -367,7 +364,7 @@ public class UserProcess {
 
 			for (int i = 0; i < section.getLength(); i++) {
 				int vpn = section.getFirstVPN() + i;
-				pageTable[vpn].readOnly=section.isReadOnly();//传递内存是否已经被读写
+				pageTable[vpn].readOnly = section.isReadOnly();// 传递内存是否已经被读写
 				section.loadPage(i, pageTable[vpn].ppn);
 			}
 		}
@@ -380,7 +377,7 @@ public class UserProcess {
 	 */
 	protected void unloadSections() {
 		UserKernel.lock.acquire();
-		for(int i = 0;i<numPages;i++)
+		for (int i = 0; i < numPages; i++)
 			UserKernel.freePage.add(pageTable[i].ppn);
 		UserKernel.lock.release();
 	}
@@ -506,11 +503,104 @@ public class UserProcess {
 			return handleUnlink(a0);// a0 文件名称在虚拟内存中的地址
 		case syscallClose:
 			return handleClose(a0);// a0 文件名称在虚拟内存中的地址
+		case syscallExec:
+			return handleExec(a0, a1, a2);
+		case syscallExit:
+			return handleExit(a0);
+		case syscallJoin:
+			return handleJoin(a0,a1);
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
 			Lib.assertNotReached("Unknown system call!");
 		}
 		return 0;
+	}
+
+	private int handleJoin(int pid, int statuAddress) {
+		// 判断是否是子进程
+		processorlock.acquire();
+		int i = 0;
+		while (i < chindrenprocess.size() && chindrenprocess.get(i).pid != pid) {
+			i++;
+		}
+		if (i == chindrenprocess.size()) {
+			processorlock.release();
+			return -1;// 不是自己的孩子
+		}
+		UserProcess up = chindrenprocess.get(i);
+		processorlock.release();
+		joinID = pid;
+		boolean status = Machine.interrupt().disable(); // 关中断?????
+		kthread = KThread.currentThread();
+		KThread.sleep();
+		Machine.interrupt().setStatus(status);// 中断还原
+		byte[] childstat = new byte[4];
+		Lib.bytesFromInt(childstat, 0, up.Status);
+		// 写入虚拟内存的指定位置
+		writeVirtualMemory(statuAddress, childstat);
+		if (up.normExit)
+			return 1;
+		return 0;
+	}
+
+	// 线程退出
+	private int handleExit(int status) {
+		coff.close();
+		for (int i = 0; i < openfile.length; i++) {
+			if (openfile[i] != null)
+				handleClose(i);
+		}
+		this.Status = status;// 保存退出状态
+		normExit = true;// 正常退出
+		if (fatherprocess != null)// 需维护父进程的子进程表
+		{
+			fatherprocess.processorlock.acquire();
+			// 从父进程的子进程表中删除自己
+			fatherprocess.chindrenprocess.remove(this);
+			if (fatherprocess.joinID == pid) { // 父进程正在等待自己执行完毕
+				boolean intStatus = Machine.interrupt().disable();
+				fatherprocess.kthread.ready();// 唤醒父进程
+				Machine.interrupt().restore(intStatus);
+			}
+			fatherprocess.processorlock.release();
+		}
+		unloadSections();// 释放内存
+		pidlock.acquire();
+		numOfRunningProcess--;// 总进程数减一
+		if (numOfRunningProcess == 0)// 无用户级进程，停机
+			Kernel.kernel.terminate();
+		pidlock.release();
+		KThread.finish();// 让thread结束
+		return 0;
+	}
+
+	private int handleExec(int fileaddress, int argc, int argcaddress) {
+		String filename = readVirtualMemoryString(fileaddress, 256);
+		// 存在非法参数
+		if (!(filename != null && argc >= 1 && argcaddress >= 0 && argcaddress <= pageSize * numPages))
+			return -1;
+		// 获得参数
+		String args[] = new String[argc];
+		for (int i = 0; i < argc; i++) {
+			byte[] argssAdress = new byte[4];// 获取参数的地址
+			readVirtualMemory(argcaddress + i * 4, argssAdress);
+			args[i] = readVirtualMemoryString(Lib.bytesToInt(argssAdress, 0), 256);
+		}
+		// 创建子进程
+		UserProcess up = UserProcess.newUserProcess();
+		if (!up.execute(filename, args))
+			return -1;
+		// 保存子进程指向父进程的引用
+		up.processorlock.acquire();
+		up.fatherprocess = this;
+		up.processorlock.release();
+		// 在自身的子进程队列中添加新进程
+		processorlock.acquire();
+		this.chindrenprocess.add(up);
+		processorlock.release();
+		// 返回子进程pid
+		return up.pid;
+
 	}
 
 	// 实现私有方法 根据syscall 文件操作接口
@@ -600,7 +690,7 @@ public class UserProcess {
 		if (writeCount < 0)
 			return -1;
 		// 返回数量
-		return writeCount;
+		return writeCount;//返回的是写入的数据长度
 	}
 
 	/**
@@ -675,6 +765,7 @@ public class UserProcess {
 				break;
 			}
 		}
+		lock.release();
 		if (ThreadedKernel.fileSystem.remove(filename))
 			return 0;
 		return -1;// 没有找到该文件出错
@@ -827,9 +918,20 @@ public class UserProcess {
 	// unliked 文件 ，不能马上删除的
 	private static LinkedList<String> unlinkFiles = new LinkedList<String>();
 	// 实现文件的互斥访问
-	public static Lock lock;
+	public static Lock lock = new Lock();
 
-	public static Lock numLock;
+	UserProcess fatherprocess;// 父进程
+	LinkedList<UserProcess> chindrenprocess = new LinkedList<UserProcess>();
+	// 保证this是自己
+	Lock processorlock = new Lock();
+	private int Status = -1;
+	private int pid;
+	public int joinID = -1;
+	private KThread kthread;
+	private boolean normExit;
+	private static int numOfRunningProcess;
+	private static int Staticpid;
+	public static Lock pidlock = new Lock();
 
 	/**
 	 * 补充类 文件管理类 实现的功能 记录文件名称 和 被打开的次数

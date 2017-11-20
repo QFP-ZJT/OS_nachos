@@ -1,5 +1,7 @@
 package nachos.threads;
 
+import nachos.threads.LotteryScheduler.LotteryQueue;
+
 /**
  * Schedules access to some sort of resource with limited access constraints. A
  * thread queue can be used to share this limited access among multiple
@@ -95,4 +97,6 @@ public abstract class ThreadQueue {
      * Print out all the threads waiting for access, in no particular order.
      */
     public abstract void print();
+
+	public abstract int geteffpri(); 
 }
