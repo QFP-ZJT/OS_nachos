@@ -1,9 +1,5 @@
 package nachos.threads;
 
-import java.util.Scanner;
-
-import org.omg.PortableServer.THREAD_POLICY_ID;
-
 import nachos.machine.*;
 import nachos.threads.LotteryScheduler.LotteryQueue;
 import nachos.threads.PriorityScheduler.PriorityQueue;
@@ -199,21 +195,17 @@ public class KThread {
 	 */
 	public static void finish() {
 		Lib.debug(dbgThread, "Finishing thread: " + currentThread.toString());
-
 		Machine.interrupt().disable();
-
 		Machine.autoGrader().finishingCurrentThread();
-
 		Lib.assertTrue(toBeDestroyed == null);
 		toBeDestroyed = currentThread;
-
 		currentThread.status = statusFinished;
 		/** zjt for P1 T1 在线程结束时，将join队列中的线程唤醒到就绪队列 **/
 		while (currentThread.joinQueue != null) {
 			KThread thread = currentThread.joinQueue.nextThread();
 			if (thread != null) {
 				thread.ready();
-				System.out.println("唤醒:" + thread.getName());
+//				System.out.println("唤醒:" + thread.getName());
 			} else {
 				break;
 			}
@@ -297,32 +289,28 @@ public class KThread {
 	 */
 	public void join() {
 		Lib.debug(dbgThread, "Joining to thread: " + toString());
-
 		Lib.assertTrue(this != currentThread);
-
 		/** zjt for P1 T1 **/
 		if (this.status == statusFinished) {
 			return;
 		} // 若调用的进程已经结束，则不作为
 
 		boolean inStatus = Machine.interrupt().disable();
-		// if (KThread.currentThread.isJoined)
-		// ;// 使得当前正在运行的线程
-		/* else */ {
+		if (this.isJoined)
+			;// 使得当前正在运行的线程
+		else {
 			/** zjt for P1 T1 **/
-//			transPriority();// 传递优先级  join优先级贡献的方式,写方法贡献或者执行acquire()
+			// transPriority();// 传递优先级 join优先级贡献的方式,写方法贡献或者执行acquire()
 			joinQueue = ThreadedKernel.scheduler.newThreadQueue(true);
 			this.joinQueue.acquire(this);
 			/** zjt for P1 T1 **/
 			joinQueue.waitForAccess(currentThread);
-			System.out.println(this.getName() + "  添加当前线程到");
+//			System.out.println(this.getName() + "  添加当前线程到");
 			isJoined = true; // 一个线程join只能阻塞一个进程
 			sleep();// 当前进程睡眠等待被调用进程结束
 		}
-
 		Machine.interrupt().restore(inStatus);
 		/** zjt for P1 T1 **/
-
 	}
 
 	private void transPriority() {
@@ -480,9 +468,7 @@ public class KThread {
 		public void run() {
 
 			System.out.println("Joiner: before joining " + joinee.getName());
-
 			joinee.join();
-
 			System.out.println("Joiner: after joining " + joinee.getName());
 
 		}
@@ -550,12 +536,10 @@ public class KThread {
 		System.out.println("--Case1: joiner joins joinee and joiner runs first--");
 
 		joiner.fork();// x
-
-		joineeThread.fork();//
+		joineeThread.fork();
+		
+		joiner.join();
 		/** zjt P1 T1 **/
-
-		// new KThread(new PingTest(1)).setName("forked thread").fork();
-		// new PingTest(0).run();
 	}
 
 	private static final char dbgThread = 't';

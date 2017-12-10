@@ -1,5 +1,7 @@
 package nachos.threads;
 
+import java.util.Currency;
+
 import nachos.machine.*;
 
 /**
@@ -41,6 +43,7 @@ public class Condition2 {
 		/** zjt P1 T2 **/
 		boolean inStatus = Machine.interrupt().disable();
 		waitQueue.waitForAccess(KThread.currentThread());
+//		System.out.println(KThread.currentThread().getName()+"sleep");
 		KThread.sleep();
 		Machine.interrupt().restore(inStatus);
 		/** zjt P1 T2 **/
@@ -76,6 +79,7 @@ public class Condition2 {
 			if (thread == null)
 				break;
 			thread.ready();
+//			System.out.println("唤醒"+thread.getName());
 		}
 		Machine.interrupt().restore(inStatus);
 		/** zjt P1 T2 **/
@@ -147,6 +151,10 @@ public class Condition2 {
 
 		lock.release();
 
+		for (int i = 0; i < 10; i++) {
+			t[i].join();
+		}
+		
 		System.out.print("Leave Condition2.selfTest\n");
 	}
 

@@ -24,13 +24,8 @@ public class Boat {
 	public static void selfTest() {
 		BoatGrader b = new BoatGrader();
 
-		begin(5, 10, b);
+		begin(3, 3, b);
 
-		// System.out.println("\n ***Testing Boats with 2 children, 1 adult***");
-		// begin(1, 2, b);
-
-		// System.out.println("\n ***Testing Boats with 3 children, 3 adults***");
-		// begin(3, 3, b);
 	}
 
 	public static void begin(int adults, int children, BoatGrader b) {
@@ -162,7 +157,7 @@ public class Boat {
 		 * 				船为EMPTY;
 		 * 					不需要判断是否需要回去(待定)
 		 * 				是否需要回去
-		 * 孩子->O渡河的影响:
+		 * 孩子M渡河到O的影响:
 		 * 				船位置变化
 		 * 				人数变化
 		 * 				船的状态变化

@@ -40,7 +40,6 @@ public class Communicator {
 		lock.acquire();
 		speaker++;
 		// 说话人的数量增加
-
 		// 如果word未释放，或者没人接受则sleep()
 		while (isWordReady || listener == 0) {
 			speakerCond.sleep();
@@ -76,11 +75,10 @@ public class Communicator {
 		// 原子操作区域
 		int word = this.word;
 		isWordReady = false;
-
+		speakerCond.wakeAll();
 		listener--;
 		System.out.println(KThread.currentThread().getName() + " listens a word  " + word);
 		lock.release();
-
 		return word;
 	}
 
@@ -92,11 +90,11 @@ public class Communicator {
 		}
 
 		public void run() {
-//			 System.out.print(KThread.currentThread().getName()
-//			 + " will speak " + this.word + "\n");
+			// System.out.print(KThread.currentThread().getName()
+			// + " will speak " + this.word + "\n");
 			comm.speak(this.word);
-//			System.out.print(KThread.currentThread().getName()
-//					 + " have speaked " + this.word + "\n");
+//			 System.out.print(KThread.currentThread().getName()
+//			 + " have speaked " + this.word + "\n");
 
 		}
 
@@ -112,13 +110,41 @@ public class Communicator {
 		public void run() {
 			int word = comm.listen();
 //			 System.out.print(KThread.currentThread().getName()
-//					 + " have listened " + word + "\n");
+//			 + " have listened " + word + "\n");
 		}
 
 		private Communicator comm;
 	}
 
 	public static void selfTest() {
+		System.out.print("\nVAR5: 先多人听 后多人说\n");
+		Communicator comm31 = new Communicator();
+		// 先多人听 后多人说
+		KThread t31[] = new KThread[10];
+		for (int i = 0; i < 5; i++) {
+			t31[i] = new KThread(new Listener(comm31));
+			t31[i].setName("VAR5 Listener Thread" + i).fork();
+		}
+
+		KThread.yield();
+
+		KThread speakerThread31 = new KThread(new Speaker(comm31, 300));
+		speakerThread31.setName("VAR5 Thread speaker").fork();
+
+		KThread.yield();
+
+		for (int i = 6; i < 10; i++) {
+			t31[i] = new KThread(new Speaker(comm31,100));
+			t31[i].setName("VAR5 Listener Thread" + i).fork();
+		}
+
+		KThread.yield();
+		for (int i = 0; i < 5; i++) {
+			t31[i].join();
+		}
+	}
+
+	public static void selfTest_back() {
 
 		System.out.print("Enter Communicator.selfTest\n");
 
@@ -192,8 +218,7 @@ public class Communicator {
 		t3[0].join();
 		speakerThread3.join();
 
-		System.out.print(
-				"\nVAR5: 先多人听 后多人说\n");
+		System.out.print("\nVAR5: 先多人听 后多人说\n");
 		Communicator comm31 = new Communicator();
 		// 先多人听 后多人说
 		KThread t31[] = new KThread[10];

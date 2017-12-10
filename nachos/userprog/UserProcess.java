@@ -762,12 +762,12 @@ public class UserProcess {
 					unlinkFiles.add(filename);
 				// if(fileCounts.get(i).count==0)//如果文件直接被删除
 				lock.release();
-				break;
+				return 0;
 			}
 		}
 		lock.release();
-		if (ThreadedKernel.fileSystem.remove(filename))
-			return 0;
+//		if (ThreadedKernel.fileSystem.remove(filename))
+//			return 0;
 		return -1;// 没有找到该文件出错
 	}
 

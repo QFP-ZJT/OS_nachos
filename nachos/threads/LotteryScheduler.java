@@ -200,6 +200,7 @@ public class LotteryScheduler extends PriorityScheduler {
 			lock.acquire();
 
 			System.out.println("*** thread " + which + " finish ");
+			
 		}
 
 		private int which;
